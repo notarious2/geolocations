@@ -12,7 +12,7 @@ services:
       - .:/opt/geolocations
     depends_on:
       - db
-    command: uvicorn main:app --host=0.0.0.0 --port=8000 --reload 
+    command: uvicorn main:app --host=0.0.0.0 --port=8000 --reload
 
   db:
     image: postgis/postgis:15-3.4-alpine
@@ -26,20 +26,7 @@ services:
       - 5432:5432
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-  
-  pgadmin:
-    container_name: geolocations-pgadmin
-    image: dpage/pgadmin4
-    restart: always
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "6060:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-
 
 volumes:
   postgres_data:
-  pgadmin_data:
+

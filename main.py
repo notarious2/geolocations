@@ -1,6 +1,6 @@
 import csv
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException, Path, status
 from geoalchemy2.functions import ST_DWithin, ST_GeogFromText, ST_GeogFromWKB
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,13 +45,6 @@ async def load_cities(db_session: AsyncSession = Depends(get_async_session)):
     return {"message": "Data is already loaded"}
 
 
-@app.get("/cities", response_model=list[CitySchema])
-async def get_cities(db_session: AsyncSession = Depends(get_async_session)):
-    result = await db_session.execute(select(City))
-    cities = result.scalars().all()[:100]
-    return cities
-
-
 @app.post("/nearby-cities-by-details")
 async def get_nearby_cities_by_details(
     nearby_cities_schema: NearbyCitiesSchema,
@@ -73,7 +66,10 @@ async def get_nearby_cities_by_details(
 
     # If the target city is not found, return an error message
     if not target_city:
-        return {"message": "City was not found"}
+        raise HTTPException(
+            status=status.HTTP_404_NOT_FOUND,
+            detail="City with provided deails was not found",
+        )
 
     # Extract the geography of the target city
     target_geography = ST_GeogFromWKB(target_city.geo_location)
@@ -108,3 +104,21 @@ async def get_nearby_cities_by_coords(
     nearby_cities = result.scalars().all()
 
     return nearby_cities
+
+
+@app.get("/cities/{state_code}", response_model=list[CitySchema])
+async def get_cities_in_state(
+    state_code: str = Path(..., min_length=2, max_length=2),
+    db_session: AsyncSession = Depends(get_async_session),
+):
+    query = select(City).where(City.state_code == state_code.upper())
+    result = await db_session.execute(query)
+    cities = result.scalars().all()
+
+    if not cities:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No cities found for provided state: {state_code}",
+        )
+
+    return cities
